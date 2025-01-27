@@ -1,0 +1,17 @@
+type P2POffer {
+  id: String!
+  customOfferLabel: String!
+  paymentOfferLabel: String!
+  tradeRate: Float!
+  flowType: String!
+}
+
+type Query {
+  p2pOffers(
+    currency: String = "BananaCrystal"
+    offerType: String
+  ): [P2POffer]
+    @rest(
+      endpoint: "https://app.bananacrystal.com/landing_page/top_offers"
+    )
+}

@@ -3,7 +3,7 @@ export default function Loading() {
   const numMessages = Math.floor(Math.random() * 5) + 2;
 
   return (
-    <div className="flex-1 overflow-hidden bg-gray-50">
+    <div className="flex-1 overflow-hidden bg-gray-900">
       {/* Messages section */}
       <div className="h-[calc(100vh-65px)] flex flex-col">
         <div className="flex-1 overflow-y-auto p-4">
@@ -16,19 +16,19 @@ export default function Loading() {
                 <div
                   className={`w-2/3 rounded-2xl p-4 ${
                     i % 2 === 0
-                      ? "bg-blue-600/10 rounded-br-none"
-                      : "bg-white rounded-bl-none border border-gray-200"
+                      ? "bg-blue-600/20 rounded-br-none"
+                      : "bg-gray-800 rounded-bl-none border border-gray-700"
                   }`}
                 >
                   <div className="space-y-3">
                     <div
-                      className={`h-4 animate-pulse rounded w-[90%] ${i % 2 === 0 ? "bg-white/40" : "bg-gray-200"}`}
+                      className={`h-4 animate-pulse rounded w-[90%] ${i % 2 === 0 ? "bg-blue-400/20" : "bg-gray-700"}`}
                     />
                     <div
-                      className={`h-4 animate-pulse rounded w-[75%] ${i % 2 === 0 ? "bg-white/40" : "bg-gray-200"}`}
+                      className={`h-4 animate-pulse rounded w-[75%] ${i % 2 === 0 ? "bg-blue-400/20" : "bg-gray-700"}`}
                     />
                     <div
-                      className={`h-4 animate-pulse rounded w-[60%] ${i % 2 === 0 ? "bg-white/40" : "bg-gray-200"}`}
+                      className={`h-4 animate-pulse rounded w-[60%] ${i % 2 === 0 ? "bg-blue-400/20" : "bg-gray-700"}`}
                     />
                   </div>
                 </div>
@@ -38,9 +38,9 @@ export default function Loading() {
         </div>
 
         {/* Input section */}
-        <div className="border-t bg-white p-4">
+        <div className="border-t border-gray-800 bg-gray-900 p-4">
           <div className="max-w-4xl mx-auto">
-            <div className="h-12 bg-gray-100 rounded-full animate-pulse" />
+            <div className="h-12 bg-gray-800 rounded-full animate-pulse" />
           </div>
         </div>
       </div>

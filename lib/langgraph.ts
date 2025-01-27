@@ -21,7 +21,10 @@ import {
 } from "@langchain/core/prompts";
 import SYSTEM_MESSAGE from "@/constants/systemMessage";
 
-// Trim the messages to manage conversation history
+// Extended timeout duration (30 minutes)
+const EXTENDED_TIMEOUT = 30 * 60 * 1000;
+
+// Trim the messages with extended timeout
 const trimmer = trimMessages({
   maxTokens: 10,
   strategy: "last",
@@ -29,19 +32,21 @@ const trimmer = trimMessages({
   includeSystem: true,
   allowPartial: false,
   startOn: "human",
+  timeout: EXTENDED_TIMEOUT,
 });
 
-// Connect to wxflows
+// Connect to wxflows with timeout
 const toolClient = new wxflows({
   endpoint: process.env.WXFLOWS_ENDPOINT || "",
   apikey: process.env.WXFLOWS_APIKEY,
+  timeout: EXTENDED_TIMEOUT,
 });
 
-// Retrieve the tools
+// Retrieve the tools with timeout configuration
 const tools = await toolClient.lcTools;
-const toolNode = new ToolNode(tools);
+const toolNode = new ToolNode(tools, { timeout: EXTENDED_TIMEOUT });
 
-// Connect to the LLM provider with better tool instructions
+// Connect to the LLM provider with extended timeouts
 const initialiseModel = () => {
   const model = new ChatAnthropic({
     modelName: "claude-3-5-sonnet-20241022",
@@ -49,10 +54,12 @@ const initialiseModel = () => {
     temperature: 0.7,
     maxTokens: 4096,
     streaming: true,
+    timeout: EXTENDED_TIMEOUT,
     clientOptions: {
       defaultHeaders: {
         "anthropic-beta": "prompt-caching-2024-07-31",
       },
+      timeout: EXTENDED_TIMEOUT,
     },
     callbacks: [
       {
@@ -73,9 +80,6 @@ const initialiseModel = () => {
             // });
           }
         },
-        // handleLLMNewToken: async (token: string) => {
-        //   // console.log("🔤 New token:", token);
-        // },
       },
     ],
   }).bindTools(tools);
@@ -88,30 +92,25 @@ function shouldContinue(state: typeof MessagesAnnotation.State) {
   const messages = state.messages;
   const lastMessage = messages[messages.length - 1] as AIMessage;
 
-  // If the LLM makes a tool call, then we route to the "tools" node
   if (lastMessage.tool_calls?.length) {
     return "tools";
   }
 
-  // If the last message is a tool message, route back to agent
   if (lastMessage.content && lastMessage._getType() === "tool") {
     return "agent";
   }
 
-  // Otherwise, we stop (reply to the user)
   return END;
 }
 
-// Define a new graph
+// Define a new graph with timeout configurations
 const createWorkflow = () => {
   const model = initialiseModel();
 
-  return new StateGraph(MessagesAnnotation)
+  return new StateGraph(MessagesAnnotation, { timeout: EXTENDED_TIMEOUT })
     .addNode("agent", async (state) => {
-      // Create the system message content
       const systemContent = SYSTEM_MESSAGE;
 
-      // Create the prompt template with system message and messages placeholder
       const promptTemplate = ChatPromptTemplate.fromMessages([
         new SystemMessage(systemContent, {
           cache_control: { type: "ephemeral" },
@@ -119,13 +118,8 @@ const createWorkflow = () => {
         new MessagesPlaceholder("messages"),
       ]);
 
-      // Trim the messages to manage conversation history
       const trimmedMessages = await trimmer.invoke(state.messages);
-
-      // Format the prompt with the current messages
       const prompt = await promptTemplate.invoke({ messages: trimmedMessages });
-
-      // Get response from the model
       const response = await model.invoke(prompt);
 
       return { messages: [response] };
@@ -139,10 +133,8 @@ const createWorkflow = () => {
 function addCachingHeaders(messages: BaseMessage[]): BaseMessage[] {
   if (!messages.length) return messages;
 
-  // Create a copy of messages to avoid mutating the original
   const cachedMessages = [...messages];
 
-  // Helper to add cache control
   const addCache = (message: BaseMessage) => {
     message.content = [
       {
@@ -153,17 +145,13 @@ function addCachingHeaders(messages: BaseMessage[]): BaseMessage[] {
     ];
   };
 
-  // Cache the last message
-  // console.log("🤑🤑🤑 Caching last message");
   addCache(cachedMessages.at(-1)!);
 
-  // Find and cache the second-to-last human message
   let humanCount = 0;
   for (let i = cachedMessages.length - 1; i >= 0; i--) {
     if (cachedMessages[i] instanceof HumanMessage) {
       humanCount++;
       if (humanCount === 2) {
-        // console.log("🤑🤑🤑 Caching second-to-last human message");
         addCache(cachedMessages[i]);
         break;
       }
@@ -174,22 +162,23 @@ function addCachingHeaders(messages: BaseMessage[]): BaseMessage[] {
 }
 
 export async function submitQuestion(messages: BaseMessage[], chatId: string) {
-  // Add caching headers to messages
   const cachedMessages = addCachingHeaders(messages);
-  // console.log("🔒🔒🔒 Messages:", cachedMessages);
-
-  // Create workflow with chatId and onToken callback
   const workflow = createWorkflow();
 
-  // Create a checkpoint to save the state of the conversation
   const checkpointer = new MemorySaver();
-  const app = workflow.compile({ checkpointer });
+  const app = workflow.compile({
+    checkpointer,
+    timeout: EXTENDED_TIMEOUT,
+  });
 
   const stream = await app.streamEvents(
     { messages: cachedMessages },
     {
       version: "v2",
-      configurable: { thread_id: chatId },
+      configurable: {
+        thread_id: chatId,
+        timeout: EXTENDED_TIMEOUT,
+      },
       streamMode: "messages",
       runId: chatId,
     }
