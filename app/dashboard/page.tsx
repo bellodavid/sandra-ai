@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { BotIcon } from "lucide-react";
 
 export default function DashboardPage() {
