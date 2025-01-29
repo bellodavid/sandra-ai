@@ -1,4 +1,4 @@
-/* eslint-disable */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
 "use client"
 import { useEffect, useRef, useState } from "react";
